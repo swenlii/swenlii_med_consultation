@@ -1,0 +1,44 @@
+{
+  "name": "localcrypto",
+  "version": "1.0.0",
+  "description": "Ok good!",
+  "main": "app.js",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "big.js": "^5.2.2",
+    "body-parser": "^1.20.0",
+    "coinbase": "^2.0.8",
+    "coinbase-commerce-node": "^1.0.0",
+    "coingecko-api": "^1.0.6",
+    "cookie-parser": "^1.4.3",
+    "ejs": "^2.5.9",
+    "ethers": "^4.0.9",
+    "express": "^4.16.3",
+    "helmet": "^3.15.0",
+    "ipware": "^1.0.0",
+    "isnumeric": "^0.3.3",
+    "language-translator": "^1.2.6",
+    "mysql": "^2.17.1",
+    "mysql2": "^2.0.0",
+    "node-geocoder": "^3.22.0",
+    "nodemailer": "^6.2.1",
+    "password-generator": "^2.2.0",
+    "redis": "^2.8.0",
+    "request": "^2.85.0",
+    "socket.io": "^2.1.0"
+  },
+  "scripts": {
+    "test": "hm"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://Igor_ZZ@bitbucket.org/Igor_ZZ/localcrypto.cloud.git"
+  },
+  "author": "Igor ZZ",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/Igor_ZZ/localcrypto.cloud#readme",
+  "bugs": {
+    "url": "https://bitbucket.org/Igor_ZZ/localcrypto.cloud/issues"
+  },
+  "devDependencies": {}
+}

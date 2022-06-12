@@ -1,0 +1,255 @@
+<script>
+    var askDoctorForm = Vue.component('ask-doctor-form', ({
+        name: 'ask-doctor-form',
+        props: ['questions', 'userObj'],
+        template: `<% include ask-doctor-form.vue %>`,
+        data: function () {
+            return {
+                step: 1,
+                emailOfUser: '',
+                sectionOfMedicine: '',
+                titleOfQuestion: '',
+                questionText: '',
+                questionKeyword: '',
+                questionFiles: [],
+                paymentFree: '0',
+                paymentCount: '',
+                paymentCurrency: 'USD',
+                paymentType: 'card',
+                paymentCardName: '',
+                paymentCardNumber: '',
+                paymentCardDate: '',
+                paymentCardYear: '',
+                paymentCardCVV: '',
+                paymentCardAgreement: false,
+
+                sectionForSearch: '',
+                keywords: '',
+                currency: '',
+
+            }
+        },
+        computed: {
+            showFilter: function () {
+                if (this.$root.showFilter === true){
+                    return true
+                }
+                else return !!(this.userObj && this.userObj.isDoctor === 1);
+            }
+        },
+        methods: {
+            searchByFilters(event){
+                event.preventDefault();
+                console.log(app.showFilter);
+                var obj = {
+                    sectionOfMedicine: this.sectionForSearch,
+                    keywords: this.keywords,
+                    currency: this.currency,
+                }
+                console.log('search by filter: ', obj);
+                socket.emit('searchByFilters', obj, function (error, answer) {
+                    if (error){
+                        swal('Error', error, 'error');
+                    } else {
+                        app.questions = answer;
+                        app.goToPage('see-questions');
+                        console.log(app.showFilter);
+                    }
+                });
+            },
+            hideFile: function (id, name) {
+                for (var i = 0; i < this.questionFiles.length; i++) {
+                    if (this.questionFiles[i].name === name) {
+                        this.questionFiles.splice(i, 1);
+                    }
+                }
+            },
+            changeRate: function () {
+                var min = 3;
+                if (this.paymentCurrency === 'RUB') {min = 200}
+                if (this.paymentCurrency === 'EUR') {min = 3}
+                if (this.paymentCurrency === 'CZK') {min = 70}
+                $('.step-2-payment-count input').attr('min', min);
+                $('.step-2-payment-count input').attr('placeholder', 'Enter the price, min ' + min + ' ' + this.paymentCurrency);
+            },
+            addFiles: function () {
+                var file = this.$refs.askDoctorFiles.files[0];
+                this.questionFiles.push({
+                    type: file.type.split('/')[1],
+                    FILE: file,
+                    name: file.name
+                })
+            },
+            pressNext: function (event) {
+                event.preventDefault();
+
+                if (this.step === 1) {
+                    var shortKeyword = 0;
+                    var keywords = this.questionKeyword.split(',');
+                    for (var i = 0; i < keywords.length; i++){
+                        if ($.trim(keywords[i]).length < 3) {
+                            shortKeyword++;
+                        }
+                    }
+
+                    if (this.titleOfQuestion.length < 2 || this.questionText.length < 6 || this.questionKeyword.length < 3) {
+                        swal('Error', 'Something is not long enough', 'error');
+                    }
+                    else if (this.titleOfQuestion.length > 300 || this.questionKeyword.length > 300) {
+                        swal('Error', 'Something is too long', 'error');
+                    }
+                    else if (shortKeyword > 0){
+                        swal('Error', shortKeyword + ' keywords has a length of less than 3', 'error')
+                    }
+                    else if (!this.userObj && this.emailOfUser === '') {
+                        swal('Error', 'Email is empty', 'error');
+                    }
+                    else {
+                        this.step = 2;
+                    }
+                }
+                else {
+                    if (this.paymentFree === '1'){
+                        var obj = {
+                            sectionOfMedicine : this.sectionOfMedicine,
+                            titleOfQuestion   : this.titleOfQuestion  ,
+                            questionText      : this.questionText     ,
+                            questionKeyword   : this.questionKeyword  ,
+                            questionFiles     : this.questionFiles    ,
+                            paymentFree       : this.paymentFree      ,
+                            paymentCurrency   : null                  ,
+                            paymentCount      : null                  ,
+                            paymentType       : null                  ,
+                            paymentCardName   : null,
+                            paymentCardNumber : null,
+                            paymentCardDate   : null,
+                            paymentCardYear   : null,
+                            paymentCardCVV    : null
+                        }
+                        if (this.userObj) {
+                            obj.registered = this.userObj.id;
+                        }
+                        else {
+                            obj.userEmail = this.emailOfUser;
+                        }
+                        socket.emit('postQuestion', obj, function (error, answer) {
+                            if (error) {
+                                swal('Error', error, 'error')
+                            } else {
+                                console.log('cookie', answer);
+                                document.cookie = `email=${answer.email}`;
+                                document.cookie = `password=${answer.password}`;
+                                swal({
+                                    title: 'Success',
+                                    type: 'success',
+                                    text: '',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                }).then (res => {
+                                    window.location.reload();
+                                });
+                            }
+                        })
+                    }
+                    else {
+                        if (this.paymentType === 'card'){
+                            if (!this.paymentCardAgreement) {
+                                swal('Error', 'You don\'t accept agreement', 'error');
+                            }
+                            else if (this.paymentCardName === '' || this.paymentCardNumber === '' || this.paymentCardCVV === '' || this.paymentCardDate === '' || this.paymentCardYear === '') {
+                                swal('Error', 'Credit card details are not complete', 'error');
+                            }
+                            else {
+                                var obj = {
+                                    sectionOfMedicine   : this.sectionOfMedicine,
+                                    titleOfQuestion     : this.titleOfQuestion  ,
+                                    questionText        : this.questionText     ,
+                                    questionKeyword     : this.questionKeyword  ,
+                                    questionFiles       : this.questionFiles    ,
+                                    paymentFree         : this.paymentFree      ,
+                                    paymentCount        : this.paymentCount     ,
+                                    paymentCurrency     : this.paymentCurrency  ,
+                                    paymentType         : 'card'                ,
+                                    paymentCardName     : this.paymentCardName  ,
+                                    paymentCardNumber   : this.paymentCardNumber,
+                                    paymentCardDate     : this.paymentCardDate  ,
+                                    paymentCardYear     : this.paymentCardYear  ,
+                                    paymentCardCVV      : this.paymentCardCVV   ,
+                                }
+                                if (this.userObj) {
+                                    obj.registered = this.userObj.id;
+                                }
+                                else {
+                                    obj.userEmail = this.emailOfUser;
+                                }
+                                socket.emit('postQuestion', obj, function (error, answer) {
+                                    if (error) {
+                                        swal('Error', error, 'error');
+                                    } else {
+                                        console.log('cookie', answer);
+                                        document.cookie = `email=${answer.email}`;
+                                        document.cookie = `password=${answer.password}`;
+                                        swal({
+                                            title: 'Success',
+                                            type: 'success',
+                                            text: '',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then (res => {
+                                            window.location.reload();
+                                        });
+                                    }
+                                })
+                            }
+                        }
+                        else {
+                            var obj = {
+                                sectionOfMedicine : this.sectionOfMedicine,
+                                titleOfQuestion   : this.titleOfQuestion  ,
+                                questionText      : this.questionText     ,
+                                questionKeyword   : this.questionKeyword  ,
+                                questionFiles     : this.questionFiles    ,
+                                paymentFree       : this.paymentFree      ,
+                                paymentCount      : this.paymentCount     ,
+                                paymentCurrency   : this.paymentCurrency  ,
+                                paymentType       : 'coinbase'            ,
+                                paymentCardName   : null,
+                                paymentCardNumber : null,
+                                paymentCardDate   : null,
+                                paymentCardYear   : null,
+                                paymentCardCVV    : null
+                            }
+                            if (this.userObj) {
+                                obj.registered = this.userObj.id;
+                            }
+                            else {
+                                obj.userEmail = this.emailOfUser;
+                            }
+                            socket.emit('postQuestion', obj, function (error, answer) {
+                                if (error) {
+                                    swal('Error', error, 'error')
+                                } else {
+                                    console.log('cookie', answer);
+                                    document.cookie = `email=${answer.email}`;
+                                    document.cookie = `password=${answer.password}`;
+                                    swal({
+                                        title: 'Success',
+                                        text: "You have created a question. It remains to complete the payment.",
+                                        type: 'success',
+                                        confirmButtonText: 'Complete payment',
+                                    }).then(result => {
+                                        window.open('https://commerce.coinbase.com/checkout/'+ answer.coinBaseId);
+                                        $('#follow-the-link').attr("href", 'https://commerce.coinbase.com/checkout/'+ answer.coinBaseId);
+                                    });
+                                }
+                            })
+                        }
+                    }
+
+                }
+            }
+        },
+        mounted() {
+        }
+    }));
+</script>

@@ -1,0 +1,205 @@
+<script>
+    var oneQuestion = Vue.component('one-question', ({
+        name: 'one-question',
+        props: ['oneQuestion', 'userObj'],
+        template: `<% include one-question.vue %>`,
+        data: function () {
+            return {
+                step: 1,
+                sectionOfMedicine: '',
+                titleOfQuestion: '',
+                questionText: '',
+                questionKeyword: '',
+                questionFiles: [],
+                paymentCount: '',
+                paymentType: 'card',
+                paymentCardName: '',
+                paymentCardNumber: '',
+                paymentCardDate: '',
+                paymentCardYear: '',
+                paymentCardCVV: '',
+                paymentCardAgreement: false,
+            }
+        },
+        computed: {
+
+        },
+        methods: {
+            showTrueAnswer(trueAnswer) {
+                if (trueAnswer === 1){
+                    return true;
+                }
+                else {
+                    if (this.userObj && this.userObj.id === this.oneQuestion.userId){
+                        var count = 0;
+                        for (var i = 0; i < this.oneQuestion.answers.length; i++){
+                            if (this.oneQuestion.answers[i].trueAnswer === 1){
+                                count++;
+                            }
+                        }
+                        return count < 4;
+                    } else {
+                        return false
+                    }
+                }
+            },
+            searchByTag(tag) {
+                tag = tag.trim();
+                console.log(tag);
+                socket.emit('searchByTag', {searchString: tag}, function (error, answer) {
+                    if (error) {
+                        swal('Error', error, 'error');
+                    }
+                    else {
+                        app.questions = answer;
+                        app.goToPage('main');
+                        app.paidQuestions = 'close';
+
+                        $('#latestQuestionHeader').html('Looking for the tag "' + tag + '" (' + answer.length +  ' results)');
+                    }
+                });
+            },
+            backgroundPath (file) {
+                var type = file.toString().split('.')[1];
+                if ((/(png|jpg|jpeg|gif)/gi).test(type)) {
+                    return 'background-image: url(/images/questions/'+ file + ');'
+                }
+                else {
+                    return 'background-image: url(/images/background-file.png);'
+                }
+            },
+            closeQuestion: function () {
+                console.log('open');
+                $('#window-close-answer').show();
+            },
+            closeWin: function (answer) {
+                $('#window-close-answer').hide();
+                if (answer === 'yes'){
+                    var count = 0;
+                    this.oneQuestion.answers.forEach(answ => {
+                        if (answ.trueAnswer === 1){
+                            count++;
+                        }
+                    });
+
+                    if (count === 0) {
+                        swal('Error!', 'You can\'t close the question until at least one true answer is selected.', 'error');
+                        return;
+                    }
+                    socket.emit('closeQuestion', {id: this.oneQuestion.id}, function (error, answer) {
+                        if (error) {
+                            swal('Error', error, 'error');
+                        } else {
+                            $('#closeButton').html('Question closed');
+                            $('#closeButton').css('background-color', '#a2a1a1');
+                            $('#closeButton').attr("disabled", true);
+                            swal({
+                                title: 'Success',
+                                type: 'success',
+                                text: '',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                        }
+                    })
+                    this.oneQuestion.active = 0;
+                }
+            },
+            trueAnswerClick: function (answer){
+                socket.emit('trueAnswer', {questionId: this.oneQuestion.id, answerId: answer.id, trueAnswer: answer.trueAnswer}, function (error, answers) {
+                    if (error) {
+                        swal('Error', error, 'error');
+                    } else {
+                        answer.trueAnswer = answer.trueAnswer === 1 ? 0 : 1;
+                        //for (var i = 0; i < app.oneQuestion.answers.length; i++){
+                        //    if (app.oneQuestion.answers[i].id === answer.id){
+                        //        console.log('до', app.oneQuestion.answers[i].trueAnswer, answer.trueAnswer)
+                        //        app.oneQuestion.answers[i].trueAnswer = app.oneQuestion.answers[i].trueAnswer === 1 ? '0' : '1';
+                        //        console.log('после', app.oneQuestion.answers[i].trueAnswer, answer.trueAnswer)
+                        //    }
+                        //}
+                    }
+                });
+            },
+            likeIt: function (answer) {
+                if (this.userObj && answer.likesCount && answer.likesCount !== '' && !answer.likesCount.includes(this.userObj.id) && this.userObj.id !== answer.idDoctor){
+                    socket.emit('likeAnswer', {answerId: answer.id, idUser: this.userObj.id}, function (error, ok) {
+                        if (error) {
+                            swal('Error', error, 'error');
+                        } else {
+                            for (var i = 0; i < app.oneQuestion.answers.length; i++){
+                                if (app.oneQuestion.answers[i].id === answer.id){
+                                     app.oneQuestion.answers[i].likesCount += '|' + app.userObj.id;
+                                }
+                            }
+                            console.log('like!');
+                        }
+                    });
+                }
+                else {
+                    if (!this.userObj){
+                        swal('You are not registered!', 'Only registered users can like and comment', 'warning');
+                    }
+                    else if (!answer.likesCount || answer.likesCount === '') {
+                        socket.emit('likeAnswer', {answerId: answer.id, idUser: this.userObj.id}, function (error, ok) {
+                            if (error) {
+                                swal('Error', error, 'error');
+                            } else {
+                                for (var i = 0; i < app.oneQuestion.answers.length; i++){
+                                    if (app.oneQuestion.answers[i].id === answer.id){
+                                         app.oneQuestion.answers[i].likesCount = JSON.stringify(app.userObj.id);
+                                    }
+                                }
+                                console.log('like!');
+                            }
+                        });
+                    }
+                    else if (answer.likesCount.includes(this.userObj.id))
+                    {
+                        swal('You already liked it!', '', 'warning');
+                    }
+                }
+            },
+            postAnswer: function () {
+                var obj = {
+                    textAnswer: $('#textAnswer').val(),
+                    idQuestion: this.oneQuestion.id,
+                    idDoctor: this.userObj.id,
+                }
+
+                socket.emit('postAnswer', obj, function (error, answer) {
+                    if (error) {
+                        swal ('Error', error, 'error');
+                    }
+                    else {
+                        swal({
+                            title: 'Success',
+                            type: 'success',
+                            text: '',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(ok => {
+                            window.location.reload();
+                        })
+                    }
+                })
+            }
+        },
+        updated () {
+            $('#window-close-answer').hide();
+            if(this.oneQuestion.active === 0){
+                $('#closeButton').html('Answer closed');
+                $('#closeButton').css('background-color', '#a2a1a1');
+                $('#closeButton').attr("disabled", true);
+            }
+            else {
+                $('#closeButton').html('Close answer');
+                $('#closeButton').css('background-color', '#e84e89');
+                $('#closeButton').attr("disabled", false);
+            }
+        },
+        mounted() {
+            $('#window-close-answer').hide();
+        }
+    }));
+</script>

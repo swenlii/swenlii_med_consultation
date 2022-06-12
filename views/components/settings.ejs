@@ -1,0 +1,264 @@
+<script>
+    var settings = Vue.component('settings', ({
+        name: 'settings',
+        props: ['userObj', 'doctors'],
+        template: `<% include settings.vue %>`,
+        data: function () {
+            return {
+                avatarFile: {},
+                changePassword: '',
+                repeatPassword: '',
+                aboutMe: '', email: '', firstLastName: '', experience: '',
+                currency: '',
+                specializations: [],
+                searchSpecializ: [],
+
+                doctorId: '',
+                paymentCount: '',
+                paymentType: 'card',
+                paymentCardName: '',
+                paymentCardNumber: '',
+                paymentCardDate: '',
+                paymentCardYear: '',
+                paymentCardCVV: '',
+                paymentCardAgreement: false,
+            }
+        },
+        methods: {
+            avatarChange: function () {
+                if (($(".registr-doctor-files"))[0].files && ($(".registr-doctor-files"))[0].files[0]) {
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        //$('#avatar-in-registration').attr('src', e.target.result);
+                        $('.avatar-in-registration').css('background-image', 'url(' + e.target.result + ')');
+                    };
+
+                    reader.readAsDataURL(($(".registr-doctor-files"))[0].files[0]);
+                }
+
+                var file = ($(".registr-doctor-files"))[0].files[0];
+                this.avatarFile = {
+                    type: file.type.split('/')[1],
+                    FILE: file,
+                    name: file.name
+                }
+            },
+            saveSettings: function (event) {
+                event.preventDefault();
+
+                if (this.avatarFile.FILE){
+                    //  change avatar
+                    console.log('change avatar');
+                    var obj = {
+                        userEmail: this.userObj.email,
+                        userPass: this.userObj.password,
+                        avatarFile: this.avatarFile
+                    }
+                    socket.emit('changeAvatar', obj, function (error, answer) {
+                        if (error){
+                            swal ('Error', error, 'error');
+                        }
+                        else {
+                            swal({
+                                title: 'Success',
+                                type: 'success',
+                                text: '',
+                                showConfirmButton: false,
+                                timer: 1500
+                            })
+                        }
+                    })
+                }
+
+                if (this.changePassword !== '' && this.repeatPassword !== ''){
+                    // change password
+                    console.log('change password');
+
+                    var obj = {
+                        userEmail: this.userObj.email,
+                        userPass: this.userObj.password,
+                        oldPassword: this.changePassword,
+                        newPassword: this.repeatPassword
+                    }
+
+                    if (this.changePassword !== this.userObj.password) {
+                        swal ('Error', 'Old password incorrect', 'error');
+                    }
+
+                    socket.emit('changePassword', obj, function (error, answer) {
+                        if (error){
+                            swal ('Error', error, 'error');
+                        }
+                        else {
+                            swal({
+                                title: 'Success',
+                                type: 'success',
+                                text: '',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then (res => {
+                                document.cookie = `password=${obj.newPassword}`;
+                                location.reload();
+                            })
+                        }
+                    })
+                }
+
+                if (this.aboutMe.toString() !== this.userObj.aboutMe.toString()  || this.email.toString()  !== this.userObj.email.toString()  || this.firstLastName.toString()  !== this.userObj.firstLastName.toString()  || this.experience.toString()  !== this.userObj.experience.toString()  || this.specializations.toString()  !== this.userObj.specializations.split(',').toString() || this.currency.toString()  !== this.userObj.currency.toString()) {
+                    // update user data
+                    console.log('change user data');
+                    var specializ = '';
+                    for (var i = 0; i < this.specializations.length; i++){
+                        if (i !== 0){
+                            specializ += ',';
+                        }
+                        specializ += this.specializations[i];
+                    }
+                    var obj = {
+                        userEmail: this.userObj.email,
+                        userPass: this.userObj.password,
+                        email : this.email,
+                        firstLastName : this.firstLastName,
+                        experience : this.experience,
+                        aboutMe : this.aboutMe,
+                        specializations : specializ,
+                        currency: this.currency
+                    }
+                    socket.emit('updateUserData', obj, function (error, answer) {
+                        if (error){
+                            swal ('Error', error, 'error');
+                        }
+                        else {
+                            swal({
+                                title: 'Success',
+                                type: 'success',
+                                text: '',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(res => {
+                                document.cookie = `email=${obj.email}`;
+                                location.reload();
+                            })
+                        }
+                    })
+                }
+
+                console.log('save')
+            },
+            hideSpecializ: function (name) {
+                for (var i = 0; i < this.specializations.length; i++) {
+                    if (this.specializations[i] === name) {
+                        this.specializations.splice(i, 1);
+                    }
+                }
+            },
+            hideSearchSpecializ: function (name) {
+                for (var i = 0; i < this.searchSpecializ.length; i++) {
+                    if (this.searchSpecializ[i] === name) {
+                        this.searchSpecializ.splice(i, 1);
+                    }
+                }
+            },
+            addProfession: function () {
+                this.specializations.push($("#doctor-profession").val());
+            },
+            addSearchProfession: function () {
+                this.searchSpecializ.push($("#doctor-profession2").val());
+            },
+            searchBySpecializ: function () {
+                socket.emit('searchDoctors', {searchBySpecializ: this.searchSpecializ}, function (error, answer) {
+                    if (error) {
+                        swal('Error', error, 'error');
+                    } else {
+                        app.doctors = answer;
+                        console.log(app.doctors);
+                    }
+                });
+            },
+            showWinPay: function(doctorId) {
+                this.doctorId = doctorId;
+                socket.emit('alreadyPaymentForConsultation', {myId: this.userObj.id, doctorId: doctorId}, function (error, answer) {
+                    if (error) {
+                        swal('Error', error, 'error');
+                    } else {
+                        if (answer === 1) {
+                            window.location.assign('/#my-dialog/' + doctorId);
+                        } else {
+                            $('#pay-window-close').show();
+                        }
+                    }
+                });
+
+            },
+            closeWin(answer){
+                $('#pay-window-close').hide();
+               if (answer === 'yes'){
+                   $('.left-container2').hide();
+                   $('.right-container2').hide();
+                   $('#pay-to-doctor').show();
+                   $('#pay-to-doctor').addClass('containerEnlargeHorizontalAfterAnim');
+               }
+            },
+            submitOnPayDoctor: function (event) {
+                event.preventDefault();
+                // pay to doctor
+                var obj = {
+                    doctorId: this.doctorId,
+                    userId: this.userObj.id,
+                    paymentCount: this.paymentCount,
+                    paymentType: this.paymentType,
+                    paymentCardName: this.paymentCardName,
+                    paymentCardNumber: this.paymentCardNumber,
+                    paymentCardDate: this.paymentCardDate,
+                    paymentCardYear: this.paymentCardYear,
+                    paymentCardCVV: this.paymentCardCVV,
+                    paymentCardAgreement: this.paymentCardAgreement
+                }
+                console.log(obj);
+                socket.emit('payToDoctor', obj, function (error, answer) {
+                    if (error){
+                        swal('Error', error, 'error');
+                    } else {
+                        console.log(obj);
+                        if (obj.paymentType === 'coinbase'){
+                            window.open('https://commerce.coinbase.com/checkout/'+ answer);
+                            $('#link-on-coinbase').attr('href', 'https://commerce.coinbase.com/checkout/'+ answer);
+                        } else {
+                            window.location.assign('/#my-messages');
+                        }
+                        $('.left-container2').show();
+                        $('.right-container2').show();
+                        $('#pay-to-doctor').hide();
+                    }
+
+                });
+                console.log(obj);
+            }
+        },
+        created () {
+            socket.emit('getAllDoctors', function (error, answer) {
+                if (error) {
+                    swal('Error', error, 'error');
+                } else {
+                    app.doctors = answer;
+                }
+            });
+            $('#pay-window-close').hide();
+            $('#pay-to-doctor').hide();
+        },
+        mounted () {
+            $('#pay-window-close').hide();
+            $('#pay-to-doctor').hide();
+            if (this.userObj){
+                $('.avatar-in-registration').css('background-image', 'url(/images/users/' + this.userObj.avatarPath + ')');
+                this.aboutMe = this.userObj.aboutMe ? this.userObj.aboutMe.toString():'';
+                this.email = this.userObj.email?this.userObj.email.toString():'';
+                this.currency = this.userObj.currency?this.userObj.currency.toString():'';
+                this.firstLastName = this.userObj.firstLastName?this.userObj.firstLastName.toString():'';
+                this.experience = this.userObj.experience?this.userObj.experience.toString():'';
+                this.specializations = this.userObj.specializations?this.userObj.specializations.split(','):'';
+            }
+        }
+    }));
+</script>

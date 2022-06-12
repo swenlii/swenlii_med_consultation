@@ -1,0 +1,54 @@
+<script>
+    var latestQuestions = Vue.component('latest-questions', ({
+        name: 'latest-questions',
+        props: ['questions', 'userObj', 'paidQuestions'],
+        template: `<% include latest-questions.vue %>`,
+        data: function () {
+            return {
+                sectionOfMedicine: '',
+                keywords: '',
+                currency: '',
+                countOnPage: 5,
+            }
+        },
+        methods: {
+            showMore: function () {
+                if (this.countOnPage + 5 > this.questions.length){
+                    this.countOnPage = this.questions.length;
+                } else {
+                    this.countOnPage = this.countOnPage + 5;
+                }
+            },
+        },
+        mounted() {
+
+        },
+        created() {
+
+        },
+        computed: {
+            paidQuestionCom: {
+                get() {
+                    return this.paidQuestions;
+                },
+                set(value) {
+                    this.countOnPage = 5;
+                    this.$emit('update-paid-question', value);
+                },
+            },
+            questionsArr: function () {
+                var arr = [];
+                this.questions.forEach(question => {
+                    if (this.paidQuestions === 'true') {
+                        if (question.paymentFree === 0 && question.active === 1) {arr.push(question)}
+                    } else if (this.paidQuestions === 'false') {
+                        if (question.paymentFree === 1 && question.active === 1) {arr.push(question)}
+                    } else if (this.paidQuestions === 'close') {
+                        if (question.active === 1) {arr.push(question)}
+                    }
+                });
+                return arr;
+            },
+        }
+    }));
+</script>

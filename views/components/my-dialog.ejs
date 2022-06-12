@@ -1,0 +1,104 @@
+<script>
+    var myDialog = Vue.component('my-dialog', ({
+        name: 'my-dialog',
+        props: ['userObj', 'messages', 'allMessages'],
+        template: `<% include my-dialog.vue %>`,
+        data: function () {
+            return {
+                messageText: '',
+                files: [],
+                online: null,
+                messageFiles: []
+            }
+        },
+        computed: {
+
+        },
+        methods: {
+            avatarInMessage(userId) {
+                if (userId === this.userObj.id) {
+                    return 'background-image: url(/images/users/' + (this.userObj.avatarPath ? this.userObj.avatarPath : 'user-avatar-placeholder.png') + ')'
+                } else {
+                    return 'background-image: url(/images/users/' + (this.messages.avatarPath ? this.messages.avatarPath : 'user-avatar-placeholder.png') + ')'
+                }
+            },
+            hideFile: function (id, name) {
+                for (var i = 0; i < this.messageFiles.length; i++) {
+                    if (this.messageFiles[i].name === name) {
+                        this.messageFiles.splice(i, 1);
+                    }
+                }
+            },
+            keyUp: function (e) {
+                if (e.keyCode === 13){
+                    this.sendMessage();
+                }
+            },
+            sendMessage: function () {
+                if (this.messageText.length > 0){
+                    var obj = {
+                        myId: this.userObj.id,
+                        messageText: this.messageText,
+                        dialogId: this.messages.dialogId,
+                        files: this.messageFiles
+                    }
+                    socket.emit('sendMessage', obj, function (error, answer) {
+                        if (error) {
+                            swal('Error', error, 'error')
+                        } else {
+                            console.log('message send');
+                            app.messagesById.replyArr.push(answer);
+                        }
+                    });
+                } else {
+                    console.log('message is empty');
+                }
+            },
+            addFilesForMessage: function () {
+                var file = this.$refs.filesInMessage.files[0];
+                this.messageFiles.push({
+                    type: file.type.split('/')[1],
+                    FILE: file,
+                    name: file.name
+                });
+                console.log(file.name);
+            }
+        },
+        mounted () {
+            socket.on('message', (mes) => {
+                app.messagesById.replyArr.push(mes);
+                if (window.location.hash === '#my-dialog/' + this.messages.id){
+                    socket.emit('allMessageReads', {id: this.messages.dialogId, isDoctor: this.userObj.isDoctor}, function (error, answer) {
+                        if (error){
+                            swal('Error', error, 'error');
+                        } else {
+                            app.setZero(app.messagesById.dialogId);
+                        }
+                    });
+                }
+            });
+            socket.on('userDisconnect', (mes) => {
+                if (this.messages.id === mes){
+                    this.online = 0;
+                }
+            });
+            socket.on('userConnect', (mes) => {
+                if (this.messages.id === mes){
+                    this.online = 1;
+                }
+            });
+            socket.emit('isOnline', this.messages.id, function (error, answer) {
+                if (error) {
+                    swal('Error', error, 'error')
+                } else {
+                    if (answer === 1){
+                        this.online = 1;
+                    }
+                    else {
+                        this.online = 0;
+                    }
+                }
+            });
+        }
+    }));
+</script>

@@ -1,0 +1,36 @@
+<script>
+    var myComments = Vue.component('my-comments', ({
+        name: 'my-comments',
+        props: ['userObj', 'questions'],
+        template: `<% include my-comments.vue %>`,
+        data: function () {
+            return {
+
+            }
+        },
+        methods: {
+
+        },
+        computed: {
+            myAnswers: function () {
+                var arr = [];
+                if (this.userObj && this.questions){
+                    for (var i = 0; i < this.questions.length; i++){
+                        if (this.questions[i].answers) {
+                            for (var j = 0; j < this.questions[i].answers.length; j++) {
+                                if (this.questions[i].answers[j].idDoctor === this.userObj.id) arr.push(this.questions[i].answers[j]);
+                            }
+                        }
+                    }
+                }
+                return arr;
+            }
+        },
+        created () {
+
+        },
+        mounted () {
+
+        }
+    }));
+</script>
