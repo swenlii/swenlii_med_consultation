@@ -8,7 +8,7 @@
 > ⚠️ **ВНИМАНИЕ!** ⚠️ Не скачивайте проект. Только для чтения. По некоторым причинам проект устарел. 
 
 <div align="center">
-<img src="public/images/consult-1.webp" width="600px">
+<img src="https://swenlii.github.io/img/projects/med-revolution.png" width="700px">
 </div>
 
 ## ⚡Описание проекта
