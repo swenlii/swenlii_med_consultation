@@ -1,0 +1,115 @@
+<script>
+    var doctorRegistration = Vue.component('doctor-registration', ({
+        name: 'doctor-registration',
+        props: ['userObj'],
+        template: `<% include doctor-registration.vue %>`,
+        data: function () {
+            return {
+                avatarFile:{},
+                aboutMe: '',
+                firstLastName: '',
+                email: '',
+                password: '',
+                repeatPassword: '',
+                experience: '',
+                specializations: []
+            }
+        },
+        methods: {
+            registrationDoctor: function (event) {
+                event.preventDefault();
+
+                if (this.password !== this.repeatPassword) {
+                    swal('Error', 'Passwords do not match', 'error');
+                }
+                else if (this.password.length < 6 || this.password.length > 200){
+                    swal('Error', 'Your password must be at least 6 characters and no more than 200 characters in length', 'error');
+                }
+                else if (!this.email.includes('@') || !this.email.includes('.')){
+                    swal('Error', 'Your email incorrect', 'error');
+                }
+                else if (this.email.length < 4 || this.email.length > 200){
+                    swal('Error', 'Your email must be at least 6 characters and no more than 200 characters in length', 'error');
+                }
+                else if (this.firstLastName.length < 4 || this.firstLastName.length > 300){
+                    swal('Error', 'Your full name must be at least 4 characters and no more than 300 characters in length', 'error');
+                }
+                else if (this.experience.length > 400){
+                    swal('Error', 'Your experience should be no more than 400 characters in length', 'error');
+                }
+                else {
+                    var specializ = '';
+                    for (var i = 0; i < this.specializations.length; i++) {
+                        if (i !== 0) {
+                            specializ += ', ';
+                        }
+                        specializ += this.specializations[i];
+                    }
+
+                    var obj = {
+                        avatarFile: this.avatarFile,
+                        aboutMe: this.aboutMe,
+                        firstLastName: this.firstLastName,
+                        email: this.email,
+                        password: this.password,
+                        repeatPassword: this.repeatPassword,
+                        experience: this.experience,
+                        specializations: specializ
+                    }
+
+                    socket.emit('registerDoctor', obj, function (error, answer) {
+                        if (error){
+                            swal('Error', error, 'error');
+                        } else {
+                            swal({
+                                title: 'Success',
+                                type: 'success',
+                                text: '',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(result => {
+                                document.cookie = `email=${obj.email}`;
+                                document.cookie = `password=${obj.password}`;
+                                window.location.assign('/');
+                            });
+
+                        }
+                    })
+                }
+
+            },
+            hideSpecializ: function (name) {
+                for (var i = 0; i < this.specializations.length; i++) {
+                    if (this.specializations[i] === name) {
+                        this.specializations.splice(i, 1);
+                    }
+                }
+            },
+            avatarChange: function () {
+                if (($(".registr-doctor-files"))[0].files && ($(".registr-doctor-files"))[0].files[0]) {
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        //$('#avatar-in-registration').attr('src', e.target.result);
+                        $('.avatar-in-registration').css('background-image', 'url(' + e.target.result + ')');
+                    };
+
+                    reader.readAsDataURL(($(".registr-doctor-files"))[0].files[0]);
+                }
+
+                var file = ($(".registr-doctor-files"))[0].files[0];
+                this.avatarFile = {
+                    type: file.type.split('/')[1],
+                    FILE: file,
+                    name: file.name
+                }
+            },
+            addProfession: function () {
+                this.specializations.push($("#doctor-profession").val());
+            }
+        },
+        mounted() {
+            //this.avatarSwitcher();
+        }
+    }));
+</script>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Med Consultation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=0.86, maximum-scale=3.0, minimum-scale=0.86">
+    <title>Med Consultation</title>
+    <link rel="stylesheet" href="css/my.css">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,600,700&display=swap&subset=cyrillic-ext" rel="stylesheet">
+
+    <script src="/js/jquery-3.3.1.min.js"></script>
+    <script src="/js/jquery-migrate-3.0.0.min.js"></script>
+    <script src="/js/socket.js"></script>
+    <script src="/js/vue.js"></script>
+    <script src="/js/vue-social-sharing.min.js"></script>
+    <script src="/js/sweetalert2.all.min.js"></script>
+    <script> var thisUrl = location.protocol + '//' + location.host;
+        var socket = io.connect(thisUrl);
+    </script>
+</head>
+
+<body>
+<div id="wrapper">
+    <div id="message-pop-up">
+        <a href="#" class="avatar-on-message" style="background-image: url(/images/users/user-avatar-placeholder.png)"></a>
+        <div class="block">
+            <div class="author" style="font-weight: 600">Olga Ozolina</div>
+            <div class="message">We remind you that consultations of specialists of the site are given only for reference purposes</div>
+        </div>
+        <div class="x-img"></div>
+    </div>
+    <header>
+        <div class="header-left">
+            <a href="/">
+                <div class="med-consultation">
+                    <div class="pink-rectangle">Med</div>
+                    <div class="consultation">CONSULTATION</div>
+                </div>
+                <div class="ask-doctor-button">ask a doctor <span class="orange-online">online</span></div>
+            </a>
+        </div>
+        <div class="header-right">
+            <div class="gravity-right">
+                <div class="if-not-login">
+                    <div class="" v-if="!this.userObj">
+                        <a href="#doctor-registration" class="doctor-registration">Doctor registration</a>
+                        <div @click="bigPinkButton()" class="pink-rectangle-2">Ask a question to doctor <img src="/images/question-icon.png"></div>
+                    </div>
+                </div>
+                <div class="if-login" v-if="this.userObj">
+                    <!-- Сообщения -->
+                    <a href="#my-messages" class="if-login-item" v-if="userObj.isDoctor === 1" style="position: relative"><img style="height: 20px" src="/images/envelope.png"><div class="messages-count">{{getCountMessages}}</div></a>
+                    <div class="if-login-item" v-if="userObj.isDoctor === 1"><a href="#my-balance" style="color: white;">Balance: {{getBalance}} {{userObj.balance.preferredCurrency}}</a></div>
+                    <div class="if-login-item" v-if="userObj.isDoctor === 1"><a href="#settings" style="color: white;">{{userObj.firstLastName}}</a></div>
+                    <div class="if-login-item" v-if="userObj.isDoctor === 1">
+                        <img style="display: inline-block; height: 10px; margin-right: 3px"src="/images/star-icon.png">
+                        <img style="display: inline-block; height: 10px; margin-right: 3px"src="/images/star-icon.png">
+                        <img style="display: inline-block; height: 10px; margin-right: 3px"src="/images/star-icon.png">
+                        <img style="display: inline-block; height: 10px; margin-right: 3px"src="/images/star-icon.png">
+                        <img style="display: inline-block; height: 10px; margin-right: 3px"src="/images/star-icon.png">
+                    </div>
+                    <!-- Звездочки -->
+                    <div class="if-login-item"><a href="#my-questions" style="color: white;">Account</a></div>
+                    <div class="if-login-item" style="margin-left: 4px">|</div>
+                    <a   class="if-login-item" style="margin-left: 4px" href="/logout/">Logout</a>
+                </div>
+                <div class="menu">
+                    <div class="menu-child">
+                        <a href="#" class="menu-item" style="display: none">Become an investor</a>
+                        <a href="#" class="menu-item">How it works?</a>
+                        <a href="#see-questions" class="menu-item">See question by specializations</a>
+                        <div class="menu-item">
+                            <div class="search-block">
+                                <img @click="searchInQuestions()" class="search-icon" src="/images/icon-search.png">
+                                <input type="text" minlength="3" class="search-input" placeholder="Type for search..." @keyup="enterSearch($event)">
+                                <div class="search-results"><span>found 3 results</span> <br><div @click="searchInQuestions()">(see questions list)</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <hr class="general-hr">
+    </header>
+
+
+    <latest-questions    v-show="whatPageToShow === 'main'"                 ref="latest-questions"    v-bind:user-obj="userObj" v-bind:questions="questions" v-bind:paid-questions="paidQuestions" @update-paid-question="updatePaidQuest" @update-questions="updateQuestions"></latest-questions>
+    <one-question        v-show="whatPageToShow === 'one-question'"         ref="one-question"        v-bind:user-obj="userObj" v-bind:one-question="oneQuestion" @update-paid-question="updatePaidQuest" @update-questions="updateQuestions"></one-question>
+    <settings            v-show="whatPageToShow === 'settings'"             ref="settings"            v-bind:user-obj="userObj" v-bind:doctors="doctors"></settings>
+    <my-questions        v-show="whatPageToShow === 'my-questions'"         ref="my-questions"        v-bind:user-obj="userObj" v-bind:questions="questions"></my-questions>
+    <my-comments         v-show="whatPageToShow === 'my-comments'"          ref="my-comments"         v-bind:user-obj="userObj" v-bind:questions="questions"></my-comments>
+    <my-balance          v-show="whatPageToShow === 'my-balance'"           ref="my-balance"          v-bind:user-obj="userObj"></my-balance>
+    <my-messages         v-show="whatPageToShow === 'my-messages'"          ref="my-messages"         v-bind:user-obj="userObj" v-bind:all-messages="allMessages"></my-messages>
+    <my-dialog           v-show="whatPageToShow === 'my-dialog'"            ref="my-dialog"           v-bind:user-obj="userObj" v-bind:messages="messagesById" v-bind:all-messages="allMessages"></my-dialog>
+    <doctor-registration v-show="whatPageToShow === 'doctor-registration'"  ref="doctor-registration" v-bind:user-obj="userObj" ></doctor-registration>
+
+    <footer>
+        <div class="footer-top">
+            <div>
+                <a href="#" class="footer-item" style="margin-left: 0px;display: none">Become an investor</a>
+                <a href="#" class="footer-item">How it works?</a>
+                <a href="#see-questions" class="footer-item">See question by specializations</a>
+            </div>
+            <div class="pay-icons">
+                <div class="icon icon1"></div>
+                <div class="icon icon2"></div>
+                <div class="icon icon3"></div>
+                <div class="icon icon4"></div>
+                <div class="icon icon5"></div>
+                <div class="icon icon6"></div>
+                <div class="icon icon7"></div>
+            </div>
+        </div>
+        <hr class="footer-hr">
+        <div class="footer-bottom">
+            We remind you that consultations of specialists of the site are given only for reference purposes and do not constitute a diagnosis or a basis for the purpose of treatment. It is necessary to consult a specialist in person, including to identify possible contraindications.
+        </div>
+    </footer>
+</div>
+
+   <%- include ('components/latest-questions.ejs'); %>
+   <%- include ('components/one-question.ejs'); %>
+   <%- include ('components/settings.ejs'); %>
+   <%- include ('components/my-questions.ejs'); %>
+   <%- include ('components/my-comments.ejs'); %>
+   <%- include ('components/my-balance.ejs'); %>
+   <%- include ('components/my-messages.ejs'); %>
+   <%- include ('components/my-dialog.ejs'); %>
+   <%- include ('components/doctor-registration.ejs'); %>
+   <%- include ('components/ask-doctor-form.ejs'); %>
+
+    <script>
+        Vue.use(SocialSharing)
+        var app = new Vue({
+            el: '#wrapper',
+            data: {
+                pages: ['main'],
+                userObj: {},
+                questions: {},
+                rates: null,
+                showFilter: false,
+                paidQuestions: 'close',
+                balance: 0,
+                oneQuestion: {},
+                doctors: [],
+                messagesById: {},
+                allMessages: {}
+            },
+            methods: {
+                setZero: function (dialogId){
+                    for (var i = 0; i < this.allMessages.length; i++){
+                        if (this.allMessages[i].dialogId === dialogId){
+                            if (this.userObj.isDoctor === 1){
+                                this.allMessages[i].unreadCountDoctor = 0;
+                            } else {
+                                this.allMessages[i].unreadCountUser = 0;
+                            }
+                        }
+                    }
+                },
+                updatePaidQuest: function (value) {
+                    this.paidQuestions = value;
+                },
+                updateQuestions: function (value) {
+                    this.questions = value;
+                },
+                enterSearch: function (event) {
+                    if ($('.search-input').val().length >= 3){
+                        socket.emit('searchQuestion', {searchString: $('.search-input').val()}, function (error, answer) {
+                            if (error) {
+                                swal('Error', error, 'error');
+                            }
+                            else {
+                                $('.search-results').css('display', 'block');
+                                $('.search-results span').html('found ' + answer.length + ' results')
+                            }
+                        });
+                    }
+                },
+
+                searchInQuestions: function () {
+                    if ($('.search-input').val().length >= 3){
+                        $('.search-results').css('display', 'none');
+                        socket.emit('searchQuestion', {searchString: $('.search-input').val()}, function (error, answer) {
+                            if (error) {
+                                swal('Error', error, 'error');
+                            }
+                            else {
+                                app.questions = answer;
+                                app.goToPage('main');
+
+                                app.paidQuestions = 'close';
+
+                                $('#latestQuestionHeader').html('Looking for the text "' + $('.search-input').val() + '" (' + answer.length +  ' results)');
+                            }
+                        });
+                    }
+                },
+
+                bigPinkButton: function () {
+                    console.log('click on big pink button!');
+
+                    $('.left-container').css('animation-name', 'containerToLeft');
+                    $('.left-container').css('animation-duration', '1333ms');
+                    $('.left-container').bind("animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd", function(){
+                        $('.left-container').addClass('containerToLeftAfterAnim');
+                    });
+
+                    $('.right-container').css('animation-name', 'containerEnlargeHorizontal');
+                    $('.right-container').css('animation-duration', '1333ms');
+                    $('.right-container').bind("animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd", function(){
+                        $('.right-container').addClass('containerEnlargeHorizontalAfterAnim');
+                    });
+
+                },
+
+                goToPage: function (value) {
+                    /** PARAMETERS ROUTER */
+                    // may be some parameters?
+                    if (value.includes("/")) {
+
+                        // get first parameter after /
+                        var parameterArr = value.split('/')
+
+                        if (parameterArr[0] === 'one-question') {     // apply offer page
+                            for (var i = 0; i < this.questions.length; i++) {
+                                if (this.questions[i].id.toString() === parameterArr[1]) {
+                                    this.oneQuestion = this.questions[i];
+                                }
+                            }
+                            if (!this.oneQuestion) {
+                                swal('Error', 'not found question', 'error')
+                            }
+                            else {
+                            }
+                        } else if (parameterArr[0] === 'my-dialog') {   // specific deal page
+                            var obj = {
+                                isDoctor: this.userObj.isDoctor,
+                                myId: this.userObj.id,
+                                personId: parameterArr[1]
+                            };
+                            socket.emit('loadMessagesById', obj, function (error, answer) {
+                                if (error){
+                                    swal('Error', error, 'error');
+                                } else {
+                                    app.messagesById = answer;
+                                }
+                            });
+                        }
+
+                        this.pages.push(parameterArr[0]);
+                    } else {
+                        if (value === 'see-questions'){
+                            this.pages.push('main');
+                            this.showFilter = true;
+                        }
+                        else {
+                            this.showFilter = false;
+                            this.pages.push(value);
+                        }
+
+                    }
+                    window.scrollTo(0, 0);
+                },
+            },
+            mounted () {
+                if (this.userObj){
+                    socket.emit('getExchangesRate', this.userObj.balance.preferredCurrency, function (error, answer) {
+                        if (error){
+                            swal('Error', error, 'error');
+                        } else {
+                            app.rates = answer;
+                        }
+                    });
+                }
+
+                $('.file-tag').onclick = function (event) {
+                    console.log('Hello!')
+                }
+
+                $('#message-pop-up').hide();
+
+                socket.on('message', (mess) => {
+                    socket.emit('getNameById', mess.userId, function (error, answer) {
+                        $('#message-pop-up').show();
+                        $('#message-pop-up .author').text(answer.firstLastName);
+                        $('#message-pop-up .message').text(mess.message);
+                        $('#message-pop-up .avatar-on-message').css('background-image', 'url(/images/users/' + answer.avatarPath ? answer.avatarPath : 'user-avatar-placeholder.png' + ')');
+                    });
+                });
+            },
+            computed: {
+                whatPageToShow: function () {
+                    // get last page from "history"
+                    let howMuch = this.pages.length;
+                    howMuch = howMuch - 1;
+                    if (howMuch < 0) {
+                        console.log('some error in whatPageToShow');
+                        return 'main';
+                    }
+                    // return last page name
+                    return this.pages[howMuch];
+                },
+                getBalance: function () {
+                    var balance = 0;
+                    if (    this.userObj.balance && this.rates){
+                        if (this.userObj.balance.RUB  > 0){balance += this.userObj.balance.RUB /this.rates.RUB ;}
+                        if (this.userObj.balance.USD  > 0){balance += this.userObj.balance.USD /this.rates.USD ;}
+                        if (this.userObj.balance.EUR  > 0){balance += this.userObj.balance.EUR /this.rates.EUR ;}
+                        if (this.userObj.balance.CZK  > 0){balance += this.userObj.balance.CZK /this.rates.CZK ;}
+                        if (this.userObj.balance.BTC  > 0){balance += this.userObj.balance.BTC /this.rates.BTC ;}
+                        if (this.userObj.balance.BCH  > 0){balance += this.userObj.balance.BCH /this.rates.BCH ;}
+                        if (this.userObj.balance.DAI  > 0){balance += this.userObj.balance.DAI /this.rates.DAI ;}
+                        if (this.userObj.balance.ETH  > 0){balance += this.userObj.balance.ETH /this.rates.ETH ;}
+                        if (this.userObj.balance.LTC  > 0){balance += this.userObj.balance.LTC /this.rates.LTC ;}
+                        if (this.userObj.balance.USDC > 0){balance += this.userObj.balance.USDC/this.rates.USDC;}
+                    }
+                    return balance.toFixed(0);
+                },
+                getCountMessages: function () {
+                    var count = 0;
+                    for (var i = 0; i < this.allMessages.length; i++){
+                        if (this.userObj.isDoctor === 1){
+                            count += this.allMessages[i].unreadCountDoctor;
+                        } else {
+                            count += this.allMessages[i].unreadCountUser;
+                        }
+
+                    }
+                    //this.allMessages.forEach(dialog => {
+                    //    count += dialog.unreadCount;
+                    //});
+                    return count;
+                }
+            },
+            created: function () {
+                if (this.userObj){
+                    socket.emit('login',{userId: this.userObj.id});
+                }
+
+                let firstHash = window.location.hash;
+                if (firstHash && typeof firstHash === 'string' && firstHash.includes('#') && firstHash.length > 1) {
+                    firstHash = firstHash.replace('#', '');
+                    this.goToPage(firstHash);
+                }
+
+                // ** ROUTER INDEX EJS *//
+                window.onhashchange = () => { // super small router :)
+                    if (window.innerDocClick) {
+                        // Your own in-page mechanism triggered the hash change
+                        console.log('Your own in-page mechanism triggered the hash change')
+                    } else {
+                        // Browser back or forward button was pressed
+                        let firstHash = window.location.hash;
+                        let tempUrl = `${window.location}`
+
+                        if (firstHash && typeof firstHash === 'string' && firstHash.includes('#') && firstHash.length > 1) {
+                            firstHash = firstHash.replace('#', '');
+                            this.goToPage(firstHash);
+                        } else if (tempUrl.includes('#') === false) {
+                            this.goToPage('main')
+                        }
+                    }
+                };
+            },
+        });
+    </script>
+</body>
+</html>

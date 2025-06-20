@@ -1,0 +1,38 @@
+<script>
+    var myMessages = Vue.component('my-messages', ({
+        name: 'my-messages',
+        props: ['userObj', 'allMessages'],
+        template: `<% include my-messages.vue %>`,
+        data: function () {
+            return {
+            }
+        },
+        methods: {
+            clickOnDialog: function (id) {
+                console.log('dialog with user ' + id);
+                socket.emit('allMessageReads', {id: id, isDoctor: this.userObj.isDoctor}, function (error, answer) {
+                    if (error){
+                        swal('Error', error, 'error');
+                    } else {
+                        app.setZero(id);
+                    }
+                });
+            }
+        },
+        mounted() {
+            if (this.userObj){
+                var obj = {
+                    isDoctor: this.userObj.isDoctor,
+                    myId: this.userObj.id
+                };
+                socket.emit('loadAllMessages', obj, function (error, answer) {
+                    if (error) {
+                        swal('Error', error, 'error');
+                    } else {
+                        app.allMessages = answer;
+                    }
+                });
+            }
+        }
+    }));
+</script>
